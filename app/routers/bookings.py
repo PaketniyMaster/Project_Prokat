@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.schemas.booking import BookingCreate, BookingResponse
 from app.crud import crud_booking
+from app.schemas.booking import BookingCreate, BookingResponse, BookingReturn
 
 router = APIRouter()
 
@@ -21,3 +22,17 @@ def create_booking(booking: BookingCreate, db: Session = Depends(get_db)):
     
     # 2. Если свободно - создаем
     return crud_booking.create_booking(db, booking)
+
+
+@router.post("/{booking_id}/return", response_model=BookingResponse)
+def return_item(booking_id: int, return_data: BookingReturn, db: Session = Depends(get_db)):
+    try:
+        booking = crud_booking.complete_booking(
+            db=db, 
+            booking_id=booking_id, 
+            item_status=return_data.item_status,
+            repair_description=return_data.repair_description
+        )
+        return booking
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

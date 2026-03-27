@@ -34,3 +34,6 @@ class ItemResponse(ItemBase):
 
     class Config:
         from_attributes = True
+    
+class RepairFinish(BaseModel):
+    cost: Decimal

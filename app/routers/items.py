@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from app.core.database import get_db
-from app.schemas.item import ItemCreate, ItemResponse, CategoryCreate, CategoryResponse
+from app.schemas.item import ItemCreate, ItemResponse, CategoryCreate, CategoryResponse, RepairFinish
 from app.crud import crud_item
 
 router = APIRouter()
@@ -25,3 +25,10 @@ def create_item(item: ItemCreate, db: Session = Depends(get_db)):
 @router.get("/items/", response_model=List[ItemResponse])
 def read_items(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return crud_item.get_items(db, skip=skip, limit=limit)
+
+@router.post("/items/{item_id}/finish_repair", response_model=ItemResponse)
+def finish_item_repair(item_id: int, repair_data: RepairFinish, db: Session = Depends(get_db)):
+    try:
+        return crud_item.finish_repair(db=db, item_id=item_id, cost=repair_data.cost)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
