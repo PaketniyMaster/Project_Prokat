@@ -29,18 +29,37 @@ def check_availability(db: Session, item_id: int, start_date, end_date):
     return True # Свободно
 
 def create_booking(db: Session, booking: BookingCreate):
-    # Создаем объект модели
+    # 1. Находим товар, чтобы узнать его цену
+    item = db.query(Item).filter(Item.id == booking.item_id).first()
+    if not item:
+        raise ValueError("Товар не найден")
+
+    # 2. Считаем длительность аренды в днях (минимум 1 день)
+    duration = booking.end_date - booking.start_date
+    days = math.ceil(duration.total_seconds() / 86400)
+    days = max(1, days)
+    
+    # 3. Считаем предварительную стоимость
+    calculated_price = item.rental_price * days
+
+    # 4. Создаем бронь уже с заполненной ценой
     db_booking = Booking(
         item_id=booking.item_id,
         client_id=booking.client_id,
         start_date=booking.start_date,
         end_date=booking.end_date,
-        status=BookingStatus.PENDING # Сначала статус "В ожидании"
+        status=BookingStatus.PENDING,
+        total_price=calculated_price # <--- Теперь цена сохраняется сразу!
     )
     db.add(db_booking)
     db.commit()
     db.refresh(db_booking)
     return db_booking
+
+def get_bookings(db: Session, skip: int = 0, limit: int = 100):
+    # Получаем все бронирования, отсортированные по ID по убыванию (новые сверху)
+    return db.query(Booking).order_by(Booking.id.desc()).offset(skip).limit(limit).all()
+
 
 def complete_booking(db: Session, booking_id: int, item_status: ItemStatus, repair_description: str = None):
     # 1. Находим бронирование
